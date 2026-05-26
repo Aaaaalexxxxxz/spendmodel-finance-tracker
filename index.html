@@ -232,6 +232,7 @@
         <div class="mini-tabs" role="tablist" aria-label="Add modes">
           <button class="mini-tab active" data-add-mode="transaction" type="button">Transaction</button>
           <button class="mini-tab" data-add-mode="recurring" type="button">Recurring</button>
+          <button class="mini-tab" data-add-mode="receipt" type="button">Receipt</button>
         </div>
 
         <form id="transactionForm" class="add-mode active">
@@ -293,6 +294,33 @@
           <button class="primary" type="submit">Add Recurring Bill</button>
           <button id="manageRecurringBtn" class="secondary-button" type="button">Manage Recurring Bills</button>
         </form>
+
+        <section id="receiptForm" class="add-mode">
+          <label>
+            Receipt photo
+            <input id="receiptImage" type="file" accept="image/*" capture="environment">
+          </label>
+          <div id="receiptPreview" class="receipt-preview">
+            <span>No receipt selected</span>
+          </div>
+          <label>
+            OCR text
+            <textarea id="receiptText" placeholder="Paste OCR text here after the receipt model reads the image. Lines like 'Coffee 4.95' or 'Groceries 38.22' will be parsed."></textarea>
+          </label>
+          <div class="split">
+            <label>
+              Receipt date
+              <input id="receiptDate" type="date">
+            </label>
+            <label>
+              Default category
+              <select id="receiptCategory"></select>
+            </label>
+          </div>
+          <button id="parseReceiptBtn" class="primary" type="button">Parse Receipt</button>
+          <div id="receiptItems" class="receipt-items"></div>
+          <button id="addReceiptItemsBtn" class="secondary-button" type="button">Add Parsed Items</button>
+        </section>
       </div>
     </section>
 

@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Spendly",
+    "slug": "spendly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "spendly",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Spendly uses receipt photos to help parse purchases into transactions.",
+          "cameraPermission": "Spendly uses the camera so you can capture receipt photos."
+        }
+      ],
+      "expo-font"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.alexzhang.spendly"
+    },
+    "android": {
+      "package": "com.alexzhang.spendly",
+      "adaptiveIcon": {
+        "backgroundColor": "#08111b"
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "replace-with-eas-project-id"
+      }
+    }
+  }
+}
