@@ -1,4 +1,4 @@
-# SpendModel Finance Tracker
+# Spendly Finance Tracker
 
 A local-first financial tracking app for summarizing spending habits, modeling recurring bills, and forecasting near-term spending.
 
