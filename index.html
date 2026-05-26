@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SpendModel Finance Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="topbar" aria-label="Overview">
+        <div>
+          <p class="eyebrow">Personal finance model</p>
+          <h1>SpendModel</h1>
+        </div>
+        <div class="top-actions">
+          <label class="icon-button" title="Import CSV">
+            <span aria-hidden="true">CSV</span>
+            <input id="csvInput" type="file" accept=".csv,text/csv">
+          </label>
+          <button id="exportBtn" class="icon-button" title="Export CSV" type="button">EXP</button>
+          <button id="resetBtn" class="icon-button danger" title="Reset sample data" type="button">RST</button>
+        </div>
+      </section>
+
+      <section class="metrics" aria-label="Financial summary">
+        <article class="metric income">
+          <span>Income</span>
+          <strong id="incomeMetric">$0</strong>
+          <small id="incomeDelta">This period</small>
+        </article>
+        <article class="metric expense">
+          <span>Spending</span>
+          <strong id="spendMetric">$0</strong>
+          <small id="spendDelta">This period</small>
+        </article>
+        <article class="metric savings">
+          <span>Net Savings</span>
+          <strong id="savingsMetric">$0</strong>
+          <small id="savingsDelta">Income minus spending</small>
+        </article>
+        <article class="metric forecast">
+          <span>30-Day Forecast</span>
+          <strong id="forecastMetric">$0</strong>
+          <small id="forecastDelta">Modeled from habits</small>
+        </article>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel controls" aria-label="Transaction controls">
+          <div class="filters">
+            <h2>Model settings</h2>
+            <label>
+              Time window
+              <select id="periodFilter">
+                <option value="30">Last 30 days</option>
+                <option value="90" selected>Last 90 days</option>
+                <option value="180">Last 6 months</option>
+                <option value="365">Last year</option>
+                <option value="all">All time</option>
+              </select>
+            </label>
+            <label>
+              Savings goal
+              <input id="goalInput" type="number" min="0" step="50" value="800">
+            </label>
+          </div>
+        </aside>
+
+        <section class="dashboard">
+          <div class="tabs" role="tablist" aria-label="Analysis views">
+            <button class="tab active" data-view="summary" type="button">Summary</button>
+            <button class="tab" data-view="patterns" type="button">Patterns</button>
+            <button class="tab" data-view="transactions" type="button">Transactions</button>
+          </div>
+
+          <section id="summaryView" class="view active" aria-label="Summary charts">
+            <div class="chart-grid">
+              <article class="panel chart-panel">
+                <div class="panel-head">
+                  <h2>Monthly cash flow</h2>
+                  <span id="trendLabel">Trend</span>
+                </div>
+                <canvas id="trendChart" width="900" height="320"></canvas>
+              </article>
+              <article class="panel chart-panel">
+                <div class="panel-head">
+                  <h2>Category mix</h2>
+                  <span id="categoryLabel">Top categories</span>
+                </div>
+                <canvas id="categoryChart" width="420" height="320"></canvas>
+              </article>
+            </div>
+            <article class="panel insights">
+              <div class="panel-head">
+                <h2>Habit summary</h2>
+                <span id="healthScore">Score 0</span>
+              </div>
+              <div id="insightsList" class="insight-list"></div>
+            </article>
+          </section>
+
+          <section id="patternsView" class="view" aria-label="Spending pattern model">
+            <div class="pattern-grid">
+              <article class="panel">
+                <h2>Recurring pressure</h2>
+                <div id="recurringList" class="rank-list"></div>
+              </article>
+              <article class="panel">
+                <h2>Goal model</h2>
+                <div class="goal-meter">
+                  <div id="goalFill"></div>
+                </div>
+                <p id="goalText" class="model-text"></p>
+              </article>
+              <article class="panel">
+                <h2>Next move</h2>
+                <p id="recommendation" class="model-text"></p>
+              </article>
+            </div>
+          </section>
+
+          <section id="transactionsView" class="view" aria-label="Transactions table">
+            <article class="panel table-panel">
+              <div class="panel-head">
+                <h2>Transaction history</h2>
+                <input id="searchInput" type="search" placeholder="Search">
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Description</th>
+                      <th>Category</th>
+                      <th>Type</th>
+                      <th>Amount</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="transactionTable"></tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <button id="addButton" class="floating-add" type="button" title="Add transaction">+</button>
+
+    <section id="addPanel" class="add-panel" aria-label="Add money movement" aria-hidden="true">
+      <div class="add-card">
+        <div class="panel-head">
+          <h2>Add money movement</h2>
+          <button id="closeAddPanel" class="icon-button" type="button" title="Close">X</button>
+        </div>
+        <div class="mini-tabs" role="tablist" aria-label="Add modes">
+          <button class="mini-tab active" data-add-mode="transaction" type="button">Transaction</button>
+          <button class="mini-tab" data-add-mode="recurring" type="button">Recurring</button>
+        </div>
+
+        <form id="transactionForm" class="add-mode active">
+          <label>
+            Description
+            <input id="description" name="description" type="text" placeholder="Coffee, rent, paycheck" required>
+          </label>
+          <div class="split">
+            <label>
+              Amount
+              <input id="amount" name="amount" type="number" step="0.01" placeholder="42.50" required>
+            </label>
+            <label>
+              Type
+              <select id="type" name="type">
+                <option value="expense">Expense</option>
+                <option value="income">Income</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Category
+            <select id="category" name="category"></select>
+          </label>
+          <label>
+            Date
+            <input id="date" name="date" type="date" required>
+          </label>
+          <button class="primary" type="submit">Add Transaction</button>
+        </form>
+
+        <form id="recurringForm" class="add-mode">
+          <label>
+            Bill name
+            <input id="recurringName" name="name" type="text" placeholder="Rent, phone payment, car insurance" required>
+          </label>
+          <div class="split">
+            <label>
+              Amount
+              <input id="recurringAmount" name="amount" type="number" min="0" step="0.01" placeholder="120.00" required>
+            </label>
+            <label>
+              Frequency
+              <select id="recurringFrequency" name="frequency">
+                <option value="monthly">Monthly</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Every 2 weeks</option>
+              </select>
+            </label>
+          </div>
+          <label>
+            Category
+            <select id="recurringCategory" name="category"></select>
+          </label>
+          <label>
+            First due date
+            <input id="recurringStart" name="startDate" type="date" required>
+          </label>
+          <button class="primary" type="submit">Add Recurring Bill</button>
+        </form>
+
+        <div class="recurring-manage">
+          <div class="panel-head compact">
+            <h2>Recurring bills</h2>
+            <span id="recurringTotal">$0/mo</span>
+          </div>
+          <div id="recurringRulesList" class="rank-list compact-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <script src="app.js"></script>
+  </body>
+</html>
