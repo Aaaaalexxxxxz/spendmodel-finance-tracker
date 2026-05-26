@@ -68,6 +68,15 @@ const exactMoney = new Intl.NumberFormat("en-US", {
   currency: "USD"
 });
 
+const chartTheme = {
+  background: "#0d1722",
+  grid: "#263445",
+  text: "#9aa8b8",
+  ink: "#ecf2f8",
+  income: "#2dd4bf",
+  expense: "#fb7185"
+};
+
 const els = {
   category: document.querySelector("#category"),
   recurringCategory: document.querySelector("#recurringCategory"),
@@ -76,17 +85,25 @@ const els = {
   date: document.querySelector("#date"),
   recurringStart: document.querySelector("#recurringStart"),
   periodFilter: document.querySelector("#periodFilter"),
+  budgetPeriodFilter: document.querySelector("#budgetPeriodFilter"),
   goalInput: document.querySelector("#goalInput"),
+  budgetGoalInput: document.querySelector("#budgetGoalInput"),
   searchInput: document.querySelector("#searchInput"),
   table: document.querySelector("#transactionTable"),
   addPanel: document.querySelector("#addPanel"),
+  recurringPanel: document.querySelector("#recurringPanel"),
   addButton: document.querySelector("#addButton"),
   closeAddPanel: document.querySelector("#closeAddPanel"),
+  closeRecurringPanel: document.querySelector("#closeRecurringPanel"),
+  manageRecurringBtn: document.querySelector("#manageRecurringBtn"),
   recurringRulesList: document.querySelector("#recurringRulesList"),
   recurringTotal: document.querySelector("#recurringTotal"),
   csvInput: document.querySelector("#csvInput"),
+  profileCsvInput: document.querySelector("#profileCsvInput"),
   exportBtn: document.querySelector("#exportBtn"),
+  profileExportBtn: document.querySelector("#profileExportBtn"),
   resetBtn: document.querySelector("#resetBtn"),
+  profileResetBtn: document.querySelector("#profileResetBtn"),
   metrics: {
     income: document.querySelector("#incomeMetric"),
     spend: document.querySelector("#spendMetric"),
@@ -110,9 +127,11 @@ categories.forEach((category) => {
 els.date.valueAsDate = new Date();
 els.recurringStart.valueAsDate = new Date();
 els.goalInput.value = localStorage.getItem(GOAL_KEY) || "800";
+els.budgetGoalInput.value = els.goalInput.value;
+els.budgetPeriodFilter.value = els.periodFilter.value;
 syncRecurringTransactions();
 
-document.querySelectorAll(".tab").forEach((tab) => {
+document.querySelectorAll(".footer-tab").forEach((tab) => {
   tab.addEventListener("click", () => switchView(tab.dataset.view));
 });
 
@@ -122,18 +141,28 @@ document.querySelectorAll(".mini-tab").forEach((tab) => {
 
 els.addButton.addEventListener("click", openAddPanel);
 els.closeAddPanel.addEventListener("click", closeAddPanel);
+els.manageRecurringBtn.addEventListener("click", openRecurringPanel);
+els.closeRecurringPanel.addEventListener("click", closeRecurringPanel);
 els.addPanel.addEventListener("click", (event) => {
   if (event.target === els.addPanel) closeAddPanel();
 });
+els.recurringPanel.addEventListener("click", (event) => {
+  if (event.target === els.recurringPanel) closeRecurringPanel();
+});
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape") closeAddPanel();
+  if (event.key === "Escape") {
+    closeAddPanel();
+    closeRecurringPanel();
+  }
 });
 document.addEventListener("click", (event) => {
   const addButton = event.target.closest("#addButton");
   const closeButton = event.target.closest("#closeAddPanel");
+  const closeRecurringButton = event.target.closest("#closeRecurringPanel");
   const modeButton = event.target.closest("[data-add-mode]");
   if (addButton) openAddPanel();
   if (closeButton) closeAddPanel();
+  if (closeRecurringButton) closeRecurringPanel();
   if (modeButton) switchAddMode(modeButton.dataset.addMode);
 });
 
@@ -174,6 +203,10 @@ els.recurringForm.addEventListener("submit", (event) => {
 });
 
 els.periodFilter.addEventListener("change", render);
+els.budgetPeriodFilter.addEventListener("change", () => {
+  els.periodFilter.value = els.budgetPeriodFilter.value;
+  render();
+});
 els.searchInput.addEventListener("input", renderTable);
 document.querySelector("#type").addEventListener("change", (event) => {
   if (event.target.value === "income") {
@@ -184,6 +217,12 @@ document.querySelector("#type").addEventListener("change", (event) => {
 });
 els.goalInput.addEventListener("input", () => {
   localStorage.setItem(GOAL_KEY, els.goalInput.value);
+  els.budgetGoalInput.value = els.goalInput.value;
+  render();
+});
+els.budgetGoalInput.addEventListener("input", () => {
+  els.goalInput.value = els.budgetGoalInput.value;
+  localStorage.setItem(GOAL_KEY, els.budgetGoalInput.value);
   render();
 });
 
@@ -204,16 +243,14 @@ els.recurringRulesList.addEventListener("click", (event) => {
 });
 
 els.resetBtn.addEventListener("click", () => {
-  transactions = [...sampleTransactions];
-  recurringRules = sampleRecurringRules();
-  saveTransactions();
-  saveRecurringRules();
-  syncRecurringTransactions();
-  render();
+  resetData();
 });
 
 els.exportBtn.addEventListener("click", exportCsv);
+els.profileExportBtn.addEventListener("click", exportCsv);
 els.csvInput.addEventListener("change", importCsv);
+els.profileCsvInput.addEventListener("change", importCsv);
+els.profileResetBtn.addEventListener("click", resetData);
 
 render();
 
@@ -264,6 +301,8 @@ function filteredTransactions() {
 
 function render() {
   syncRecurringTransactions();
+  els.budgetPeriodFilter.value = els.periodFilter.value;
+  els.budgetGoalInput.value = els.goalInput.value;
   const data = filteredTransactions();
   const model = buildModel(data);
   renderMetrics(model);
@@ -388,6 +427,7 @@ function renderPatterns(model) {
       <strong>${money.format(item.total)}</strong>
     </div>
   `).join("");
+  document.querySelector("#budgetFixedLabel").textContent = `${money.format(model.monthlyRecurring)} fixed`;
 
   const goal = Number(els.goalInput.value || 0);
   const progress = goal > 0 ? Math.max(0, Math.min(100, (model.net / goal) * 100)) : 100;
@@ -454,9 +494,9 @@ function drawTrendChart(months) {
     const x = pad + index * slot + slot * 0.18;
     const incomeHeight = (month.income / max) * (height - pad * 2);
     const expenseHeight = (month.expenses / max) * (height - pad * 2);
-    bar(ctx, x, height - pad - incomeHeight, slot * 0.24, incomeHeight, "#0f8b8d");
-    bar(ctx, x + slot * 0.3, height - pad - expenseHeight, slot * 0.24, expenseHeight, "#c4493d");
-    ctx.fillStyle = "#667085";
+    bar(ctx, x, height - pad - incomeHeight, slot * 0.24, incomeHeight, chartTheme.income);
+    bar(ctx, x + slot * 0.3, height - pad - expenseHeight, slot * 0.24, expenseHeight, chartTheme.expense);
+    ctx.fillStyle = chartTheme.text;
     ctx.font = "700 13px system-ui";
     ctx.fillText(month.month.slice(5), x, height - 18);
   });
@@ -469,9 +509,11 @@ function drawCategoryChart(categoriesByTotal) {
   const width = canvas.width;
   const height = canvas.height;
   ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = chartTheme.background;
+  ctx.fillRect(0, 0, width, height);
   const entries = Object.entries(categoriesByTotal).sort((a, b) => b[1] - a[1]).slice(0, 6);
   const total = entries.reduce((value, [, amount]) => value + amount, 0);
-  const colors = ["#345995", "#0f8b8d", "#c4493d", "#b7791f", "#276749", "#6b7280"];
+  const colors = ["#60a5fa", "#2dd4bf", "#fb7185", "#fbbf24", "#86efac", "#a78bfa"];
   let start = -Math.PI / 2;
   entries.forEach(([name, amount], index) => {
     const slice = total ? (amount / total) * Math.PI * 2 : 0;
@@ -485,7 +527,7 @@ function drawCategoryChart(categoriesByTotal) {
 
     ctx.fillStyle = colors[index];
     ctx.fillRect(286, 54 + index * 34, 12, 12);
-    ctx.fillStyle = "#17202a";
+    ctx.fillStyle = chartTheme.ink;
     ctx.font = "700 13px system-ui";
     ctx.fillText(name, 306, 65 + index * 34);
   });
@@ -493,9 +535,9 @@ function drawCategoryChart(categoriesByTotal) {
 }
 
 function drawChartFrame(ctx, width, height) {
-  ctx.fillStyle = "#fbfdff";
+  ctx.fillStyle = chartTheme.background;
   ctx.fillRect(0, 0, width, height);
-  ctx.strokeStyle = "#d9e2ec";
+  ctx.strokeStyle = chartTheme.grid;
   ctx.lineWidth = 1;
   for (let y = 54; y < height - 40; y += 54) {
     ctx.beginPath();
@@ -511,8 +553,17 @@ function bar(ctx, x, y, width, height, color) {
 }
 
 function switchView(view) {
-  document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
+  document.querySelectorAll(".footer-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
   document.querySelectorAll(".view").forEach((panel) => panel.classList.toggle("active", panel.id === `${view}View`));
+}
+
+function resetData() {
+  transactions = [...sampleTransactions];
+  recurringRules = sampleRecurringRules();
+  saveTransactions();
+  saveRecurringRules();
+  syncRecurringTransactions();
+  render();
 }
 
 function switchAddMode(mode) {
@@ -529,6 +580,17 @@ function openAddPanel() {
 function closeAddPanel() {
   els.addPanel.classList.remove("open");
   els.addPanel.setAttribute("aria-hidden", "true");
+}
+
+function openRecurringPanel() {
+  closeAddPanel();
+  els.recurringPanel.classList.add("open");
+  els.recurringPanel.setAttribute("aria-hidden", "false");
+}
+
+function closeRecurringPanel() {
+  els.recurringPanel.classList.remove("open");
+  els.recurringPanel.setAttribute("aria-hidden", "true");
 }
 
 function sampleRecurringRules() {
@@ -642,6 +704,7 @@ function importCsv(event) {
     saveTransactions();
     render();
     els.csvInput.value = "";
+    els.profileCsvInput.value = "";
   };
   reader.readAsText(file);
 }

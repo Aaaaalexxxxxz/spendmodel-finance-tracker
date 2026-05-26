@@ -23,58 +23,31 @@
         </div>
       </section>
 
-      <section class="metrics" aria-label="Financial summary">
-        <article class="metric income">
-          <span>Income</span>
-          <strong id="incomeMetric">$0</strong>
-          <small id="incomeDelta">This period</small>
-        </article>
-        <article class="metric expense">
-          <span>Spending</span>
-          <strong id="spendMetric">$0</strong>
-          <small id="spendDelta">This period</small>
-        </article>
-        <article class="metric savings">
-          <span>Net Savings</span>
-          <strong id="savingsMetric">$0</strong>
-          <small id="savingsDelta">Income minus spending</small>
-        </article>
-        <article class="metric forecast">
-          <span>30-Day Forecast</span>
-          <strong id="forecastMetric">$0</strong>
-          <small id="forecastDelta">Modeled from habits</small>
-        </article>
-      </section>
-
       <section class="workspace">
-        <aside class="panel controls" aria-label="Transaction controls">
-          <div class="filters">
-            <h2>Model settings</h2>
-            <label>
-              Time window
-              <select id="periodFilter">
-                <option value="30">Last 30 days</option>
-                <option value="90" selected>Last 90 days</option>
-                <option value="180">Last 6 months</option>
-                <option value="365">Last year</option>
-                <option value="all">All time</option>
-              </select>
-            </label>
-            <label>
-              Savings goal
-              <input id="goalInput" type="number" min="0" step="50" value="800">
-            </label>
-          </div>
-        </aside>
-
         <section class="dashboard">
-          <div class="tabs" role="tablist" aria-label="Analysis views">
-            <button class="tab active" data-view="summary" type="button">Summary</button>
-            <button class="tab" data-view="patterns" type="button">Patterns</button>
-            <button class="tab" data-view="transactions" type="button">Transactions</button>
-          </div>
-
-          <section id="summaryView" class="view active" aria-label="Summary charts">
+          <section id="overviewView" class="view active" aria-label="Overview dashboard">
+            <section class="metrics" aria-label="Financial summary">
+              <article class="metric income">
+                <span>Income</span>
+                <strong id="incomeMetric">$0</strong>
+                <small id="incomeDelta">This period</small>
+              </article>
+              <article class="metric expense">
+                <span>Spending</span>
+                <strong id="spendMetric">$0</strong>
+                <small id="spendDelta">This period</small>
+              </article>
+              <article class="metric savings">
+                <span>Net Savings</span>
+                <strong id="savingsMetric">$0</strong>
+                <small id="savingsDelta">Income minus spending</small>
+              </article>
+              <article class="metric forecast">
+                <span>30-Day Forecast</span>
+                <strong id="forecastMetric">$0</strong>
+                <small id="forecastDelta">Modeled from habits</small>
+              </article>
+            </section>
             <div class="chart-grid">
               <article class="panel chart-panel">
                 <div class="panel-head">
@@ -100,11 +73,24 @@
             </article>
           </section>
 
-          <section id="patternsView" class="view" aria-label="Spending pattern model">
+          <section id="budgetView" class="view" aria-label="Budget dashboard">
             <div class="pattern-grid">
               <article class="panel">
-                <h2>Recurring pressure</h2>
-                <div id="recurringList" class="rank-list"></div>
+                <h2>Budget view</h2>
+                <label>
+                  Time window
+                  <select id="budgetPeriodFilter">
+                    <option value="30">Last 30 days</option>
+                    <option value="90" selected>Last 90 days</option>
+                    <option value="180">Last 6 months</option>
+                    <option value="365">Last year</option>
+                    <option value="all">All time</option>
+                  </select>
+                </label>
+                <label>
+                  Savings goal
+                  <input id="budgetGoalInput" type="number" min="0" step="50" value="800">
+                </label>
               </article>
               <article class="panel">
                 <h2>Goal model</h2>
@@ -118,12 +104,19 @@
                 <p id="recommendation" class="model-text"></p>
               </article>
             </div>
+            <article class="panel insights">
+              <div class="panel-head">
+                <h2>Recurring pressure</h2>
+                <span id="budgetFixedLabel">$0 fixed</span>
+              </div>
+              <div id="recurringList" class="rank-list"></div>
+            </article>
           </section>
 
-          <section id="transactionsView" class="view" aria-label="Transactions table">
+          <section id="activityView" class="view" aria-label="Activity and transactions">
             <article class="panel table-panel">
               <div class="panel-head">
-                <h2>Transaction history</h2>
+                <h2>Recent activity</h2>
                 <input id="searchInput" type="search" placeholder="Search">
               </div>
               <div class="table-wrap">
@@ -143,11 +136,92 @@
               </div>
             </article>
           </section>
+
+          <section id="profileView" class="view" aria-label="Profile settings and privacy">
+            <div class="pattern-grid">
+              <article class="panel">
+                <h2>Data controls</h2>
+                <p class="model-text">Your transaction data stays in this browser through local storage. Use export before clearing data or changing devices.</p>
+                <div class="profile-actions">
+                  <label class="secondary-button" title="Import CSV">
+                    Import CSV
+                    <input id="profileCsvInput" type="file" accept=".csv,text/csv">
+                  </label>
+                  <button id="profileExportBtn" class="secondary-button" type="button">Export CSV</button>
+                  <button id="profileResetBtn" class="secondary-button danger" type="button">Reset Data</button>
+                </div>
+              </article>
+              <article class="panel">
+                <h2>Model settings</h2>
+                <label>
+                  Time window
+                  <select id="periodFilter">
+                    <option value="30">Last 30 days</option>
+                    <option value="90" selected>Last 90 days</option>
+                    <option value="180">Last 6 months</option>
+                    <option value="365">Last year</option>
+                    <option value="all">All time</option>
+                  </select>
+                </label>
+                <label>
+                  Savings goal
+                  <input id="goalInput" type="number" min="0" step="50" value="800">
+                </label>
+              </article>
+              <article class="panel">
+                <h2>Privacy</h2>
+                <div class="setting-row">
+                  <span>
+                    <b>Local-only storage</b>
+                    <small>No account, no remote database, no tracking scripts.</small>
+                  </span>
+                  <strong>On</strong>
+                </div>
+                <div class="setting-row">
+                  <span>
+                    <b>CSV portability</b>
+                    <small>Import or export transactions whenever you need.</small>
+                  </span>
+                  <strong>Ready</strong>
+                </div>
+              </article>
+              <article class="panel">
+                <h2>Profile</h2>
+                <div class="profile-card">
+                  <span class="avatar">AZ</span>
+                  <span>
+                    <b>Alex Zhang</b>
+                    <small>SpendModel local profile</small>
+                  </span>
+                </div>
+              </article>
+            </div>
+          </section>
         </section>
       </section>
     </main>
 
-    <button id="addButton" class="floating-add" type="button" title="Add transaction">+</button>
+    <footer class="app-footer" aria-label="Primary navigation">
+      <button class="footer-tab active" data-view="overview" type="button" title="Overview" aria-label="Overview">
+        <span class="footer-icon">⌂</span>
+        <span>Overview</span>
+      </button>
+      <button class="footer-tab" data-view="activity" type="button" title="Activity" aria-label="Activity">
+        <span class="footer-icon">▤</span>
+        <span>Activity</span>
+      </button>
+      <button id="addButton" class="footer-add" type="button" title="Add transaction" aria-label="Add transaction">
+        <span>+</span>
+      </button>
+      <button class="footer-tab" data-view="budget" type="button" title="Budget" aria-label="Budget">
+        <span class="footer-icon">$</span>
+        <span>Budget</span>
+      </button>
+      <button class="footer-tab" data-view="profile" type="button" title="Profile" aria-label="Profile">
+        <span class="footer-icon">◎</span>
+        <span>Profile</span>
+      </button>
+    </footer>
 
     <section id="addPanel" class="add-panel" aria-label="Add money movement" aria-hidden="true">
       <div class="add-card">
@@ -217,8 +291,17 @@
             <input id="recurringStart" name="startDate" type="date" required>
           </label>
           <button class="primary" type="submit">Add Recurring Bill</button>
+          <button id="manageRecurringBtn" class="secondary-button" type="button">Manage Recurring Bills</button>
         </form>
+      </div>
+    </section>
 
+    <section id="recurringPanel" class="add-panel" aria-label="Manage recurring bills" aria-hidden="true">
+      <div class="add-card">
+        <div class="panel-head">
+          <h2>Manage recurring bills</h2>
+          <button id="closeRecurringPanel" class="icon-button" type="button" title="Close">X</button>
+        </div>
         <div class="recurring-manage">
           <div class="panel-head compact">
             <h2>Recurring bills</h2>
