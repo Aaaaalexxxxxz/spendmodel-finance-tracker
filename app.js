@@ -16,6 +16,20 @@ const categories = [
   "Other"
 ];
 
+const categoryIcons = {
+  Housing: "⌂",
+  Food: "◐",
+  Transport: "↗",
+  Shopping: "◇",
+  Health: "+",
+  Entertainment: "♪",
+  Subscriptions: "↻",
+  Debt: "!",
+  Savings: "▴",
+  Income: "$",
+  Other: "•"
+};
+
 const sampleTransactions = [
   ["2026-02-02", "Salary", "Income", "income", 4200],
   ["2026-02-03", "Rent", "Housing", "expense", 1450],
@@ -56,6 +70,7 @@ const sampleTransactions = [
 
 let transactions = loadTransactions();
 let recurringRules = loadRecurringRules();
+let activityEditMode = false;
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -79,7 +94,9 @@ const chartTheme = {
 
 const els = {
   category: document.querySelector("#category"),
+  categoryGrid: document.querySelector("#categoryGrid"),
   recurringCategory: document.querySelector("#recurringCategory"),
+  recurringCategoryGrid: document.querySelector("#recurringCategoryGrid"),
   form: document.querySelector("#transactionForm"),
   recurringForm: document.querySelector("#recurringForm"),
   date: document.querySelector("#date"),
@@ -89,6 +106,7 @@ const els = {
   goalInput: document.querySelector("#goalInput"),
   budgetGoalInput: document.querySelector("#budgetGoalInput"),
   searchInput: document.querySelector("#searchInput"),
+  activityEditBtn: document.querySelector("#activityEditBtn"),
   table: document.querySelector("#transactionTable"),
   addPanel: document.querySelector("#addPanel"),
   recurringPanel: document.querySelector("#recurringPanel"),
@@ -117,12 +135,12 @@ const els = {
 };
 
 categories.forEach((category) => {
-  const option = document.createElement("option");
-  option.value = category;
-  option.textContent = category;
-  els.category.append(option);
-  els.recurringCategory.append(option.cloneNode(true));
+  els.categoryGrid.append(createCategoryButton(category, () => setTransactionCategory(category)));
+  els.recurringCategoryGrid.append(createCategoryButton(category, () => setRecurringCategory(category)));
 });
+
+setTransactionCategory(els.category.value || "Food");
+setRecurringCategory(els.recurringCategory.value || "Housing");
 
 els.date.valueAsDate = new Date();
 els.recurringStart.valueAsDate = new Date();
@@ -208,11 +226,15 @@ els.budgetPeriodFilter.addEventListener("change", () => {
   render();
 });
 els.searchInput.addEventListener("input", renderTable);
+els.activityEditBtn.addEventListener("click", () => {
+  activityEditMode = !activityEditMode;
+  renderTable();
+});
 document.querySelector("#type").addEventListener("change", (event) => {
   if (event.target.value === "income") {
-    els.category.value = "Income";
+    setTransactionCategory("Income");
   } else if (els.category.value === "Income") {
-    els.category.value = "Other";
+    setTransactionCategory("Other");
   }
 });
 els.goalInput.addEventListener("input", () => {
@@ -242,13 +264,13 @@ els.recurringRulesList.addEventListener("click", (event) => {
   render();
 });
 
-els.resetBtn.addEventListener("click", () => {
+els.resetBtn?.addEventListener("click", () => {
   resetData();
 });
 
-els.exportBtn.addEventListener("click", exportCsv);
+els.exportBtn?.addEventListener("click", exportCsv);
 els.profileExportBtn.addEventListener("click", exportCsv);
-els.csvInput.addEventListener("change", importCsv);
+els.csvInput?.addEventListener("change", importCsv);
 els.profileCsvInput.addEventListener("change", importCsv);
 els.profileResetBtn.addEventListener("click", resetData);
 
@@ -466,16 +488,32 @@ function renderTable() {
     .filter((item) => !query || `${item.date} ${item.description} ${item.category} ${item.type}`.toLowerCase().includes(query))
     .sort((a, b) => b.date.localeCompare(a.date));
 
-  els.table.innerHTML = rows.map((item) => `
-    <tr>
-      <td>${escapeHtml(item.date)}</td>
-      <td>${escapeHtml(item.description)}</td>
-      <td>${escapeHtml(item.category)}</td>
-      <td>${escapeHtml(item.type)}</td>
-      <td class="amount">${item.type === "expense" ? "-" : ""}${exactMoney.format(item.amount)}</td>
-      <td><button class="delete-row" data-id="${item.id}" type="button" title="Delete">DEL</button></td>
-    </tr>
-  `).join("");
+  els.activityEditBtn.classList.toggle("active", activityEditMode);
+  els.activityEditBtn.textContent = activityEditMode ? "Done" : "Edit";
+  els.table.closest("table").classList.toggle("editing", activityEditMode);
+
+  let activeMonth = "";
+  els.table.innerHTML = rows.map((item) => {
+    const month = monthLabel(item.date);
+    const showMonth = month !== activeMonth;
+    activeMonth = month;
+    return `
+      ${showMonth ? `
+        <tr class="month-row">
+          <td colspan="4"><span>${escapeHtml(month)}</span></td>
+        </tr>
+      ` : ""}
+      <tr>
+        <td class="delete-column">${activityEditMode ? `<button class="delete-row" data-id="${escapeHtml(item.id)}" type="button" title="Delete ${escapeHtml(item.description)}">×</button>` : ""}</td>
+        <td class="date-cell">${escapeHtml(shortDate(item.date))}</td>
+        <td class="description-cell">
+          <span>${escapeHtml(item.description)}</span>
+          <small>${escapeHtml(item.category)}</small>
+        </td>
+        <td class="amount ${item.type === "income" ? "income-amount" : "expense-amount"}">${item.type === "expense" ? "-" : ""}${exactMoney.format(item.amount)}</td>
+      </tr>
+    `;
+  }).join("");
 }
 
 function drawTrendChart(months) {
@@ -569,6 +607,36 @@ function resetData() {
 function switchAddMode(mode) {
   document.querySelectorAll(".mini-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.addMode === mode));
   document.querySelectorAll(".add-mode").forEach((panel) => panel.classList.toggle("active", panel.id === `${mode}Form`));
+}
+
+function createCategoryButton(category, onSelect) {
+  const button = document.createElement("button");
+  button.className = "category-option";
+  button.type = "button";
+  button.dataset.category = category;
+  button.setAttribute("role", "radio");
+  button.setAttribute("aria-checked", "false");
+  button.innerHTML = `<span class="category-icon">${categoryIcons[category] || "•"}</span><span>${category}</span>`;
+  button.addEventListener("click", onSelect);
+  return button;
+}
+
+function setTransactionCategory(category) {
+  els.category.value = category;
+  els.categoryGrid.querySelectorAll(".category-option").forEach((button) => {
+    const selected = button.dataset.category === category;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-checked", String(selected));
+  });
+}
+
+function setRecurringCategory(category) {
+  els.recurringCategory.value = category;
+  els.recurringCategoryGrid.querySelectorAll(".category-option").forEach((button) => {
+    const selected = button.dataset.category === category;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-checked", String(selected));
+  });
 }
 
 function openAddPanel() {
@@ -703,7 +771,7 @@ function importCsv(event) {
     transactions = [...transactions, ...imported];
     saveTransactions();
     render();
-    els.csvInput.value = "";
+    if (els.csvInput) els.csvInput.value = "";
     els.profileCsvInput.value = "";
   };
   reader.readAsText(file);
@@ -760,4 +828,14 @@ function escapeHtml(value) {
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
+}
+
+function shortDate(value) {
+  const [, month, day] = String(value).split("-");
+  return `${month}/${day}`;
+}
+
+function monthLabel(value) {
+  const date = new Date(`${value}T00:00:00`);
+  return date.toLocaleString("en-US", { month: "short" });
 }

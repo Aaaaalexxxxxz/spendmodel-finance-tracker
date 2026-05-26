@@ -37,6 +37,26 @@ Start Expo:
 npm start
 ```
 
+### Receipt OCR
+
+The mobile receipt flow can call any OCR model served behind a secure endpoint. Set the endpoint before starting Expo:
+
+```bash
+EXPO_PUBLIC_OCR_ENDPOINT=https://your-domain.example/ocr npm start
+```
+
+Spendly sends a `POST` request with multipart form data under the `image` field. The endpoint can return plain text or JSON with one of these shapes:
+
+```json
+{ "text": "Milk 4.29\nBread 3.49" }
+```
+
+```json
+{ "lines": ["Milk 4.29", "Bread 3.49"] }
+```
+
+Keep provider API keys on that backend endpoint instead of embedding them in the mobile app.
+
 Build for app stores with EAS:
 
 ```bash

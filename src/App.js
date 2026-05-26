@@ -19,6 +19,7 @@ import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-
 const STORAGE_KEY = "spendly.transactions.v1";
 const RECURRING_KEY = "spendly.recurring.v1";
 const GOAL_KEY = "spendly.goal.v1";
+const OCR_ENDPOINT = process.env.EXPO_PUBLIC_OCR_ENDPOINT;
 
 const categories = [
   "Housing",
@@ -33,6 +34,20 @@ const categories = [
   "Income",
   "Other"
 ];
+
+const categoryIcons = {
+  Housing: "home-outline",
+  Food: "restaurant-outline",
+  Transport: "car-outline",
+  Shopping: "bag-outline",
+  Health: "medkit-outline",
+  Entertainment: "musical-notes-outline",
+  Subscriptions: "repeat-outline",
+  Debt: "card-outline",
+  Savings: "trending-up-outline",
+  Income: "cash-outline",
+  Other: "apps-outline"
+};
 
 const sampleTransactions = [
   ["2026-02-02", "Salary", "Income", "income", 4200],
@@ -95,6 +110,7 @@ export default function App() {
   const [receiptDate, setReceiptDate] = useState(today());
   const [receiptCategory, setReceiptCategory] = useState("Other");
   const [receiptItems, setReceiptItems] = useState([]);
+  const [ocrLoading, setOcrLoading] = useState(false);
 
   useEffect(() => {
     loadStoredData();
@@ -239,6 +255,9 @@ export default function App() {
           receiptImage={receiptImage}
           pickReceiptImage={pickReceiptImage}
           takeReceiptPhoto={takeReceiptPhoto}
+          recognizeReceiptImage={recognizeReceiptImage}
+          ocrLoading={ocrLoading}
+          ocrReady={Boolean(OCR_ENDPOINT)}
           receiptDate={receiptDate}
           setReceiptDate={setReceiptDate}
           receiptCategory={receiptCategory}
@@ -280,6 +299,32 @@ export default function App() {
       quality: 0.85
     });
     if (!result.canceled) setReceiptImage(result.assets[0]);
+  }
+
+  async function recognizeReceiptImage() {
+    if (!OCR_ENDPOINT) {
+      Alert.alert("OCR endpoint missing", "Set EXPO_PUBLIC_OCR_ENDPOINT to your OCR service URL before running recognition.");
+      return;
+    }
+    if (!receiptImage?.uri) {
+      Alert.alert("No receipt selected", "Take or upload a receipt image first.");
+      return;
+    }
+
+    setOcrLoading(true);
+    try {
+      const text = await runReceiptOcr(receiptImage);
+      if (!text) {
+        Alert.alert("No text found", "The OCR model did not return readable receipt text.");
+        return;
+      }
+      setReceiptText(text);
+      setReceiptItems(parseReceiptLines(text, receiptCategory));
+    } catch (error) {
+      Alert.alert("OCR failed", error.message || "The OCR model could not read this receipt.");
+    } finally {
+      setOcrLoading(false);
+    }
   }
 }
 
@@ -360,26 +405,32 @@ function Profile({ resetData, period, setPeriod, goal, setGoal }) {
 
 function AddModal(props) {
   return (
-    <Modal visible={props.visible} animationType="fade" transparent>
-      <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
-          <View style={styles.panelHead}>
-            <Text style={styles.panelTitle}>Add money movement</Text>
-            <Pressable onPress={props.close}><Ionicons name="close" size={24} color="#ecf2f8" /></Pressable>
-          </View>
-          <View style={styles.modeTabs}>
-            {["transaction", "recurring", "receipt"].map((mode) => (
-              <Pressable key={mode} style={[styles.modeTab, props.addMode === mode && styles.modeTabActive]} onPress={() => props.setAddMode(mode)}>
-                <Text style={[styles.modeTabText, props.addMode === mode && styles.modeTabTextActive]}>{titleCase(mode)}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <ScrollView>
+    <Modal visible={props.visible} animationType="slide" transparent>
+      <View style={styles.addBackdrop}>
+        <View style={styles.addSheet}>
+          <ScrollView stickyHeaderIndices={[0]} contentContainerStyle={styles.addSheetContent}>
+            <View style={styles.addSheetHeader}>
+              <View style={styles.panelHead}>
+                <Text style={styles.addSheetTitle}>Add Transaction</Text>
+                <Pressable onPress={props.close}><Ionicons name="close" size={24} color="#ecf2f8" /></Pressable>
+              </View>
+              <View style={styles.modeTabs}>
+                {[
+                  ["transaction", "One-Time"],
+                  ["recurring", "Recurring"],
+                  ["receipt", "Add Receipt"]
+                ].map(([mode, label]) => (
+                  <Pressable key={mode} style={[styles.modeTab, props.addMode === mode && styles.modeTabActive]} onPress={() => props.setAddMode(mode)}>
+                    <Text style={[styles.modeTabText, props.addMode === mode && styles.modeTabTextActive]}>{label}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
             {props.addMode === "transaction" && (
               <View>
                 <Field label="Description" value={props.form.description} onChangeText={(value) => props.setForm({ ...props.form, description: value })} />
                 <Field label="Amount" value={props.form.amount} onChangeText={(value) => props.setForm({ ...props.form, amount: value })} keyboardType="numeric" />
-                <PickerLike label="Category" value={props.form.category} setValue={(value) => props.setForm({ ...props.form, category: value })} options={categories} />
+                <CategoryGrid label="Category" value={props.form.category} setValue={(value) => props.setForm({ ...props.form, category: value })} />
                 <Pressable style={styles.primaryButton} onPress={props.addTransaction}><Text style={styles.primaryButtonText}>Add Transaction</Text></Pressable>
               </View>
             )}
@@ -387,7 +438,7 @@ function AddModal(props) {
               <View>
                 <Field label="Bill name" value={props.recurringForm.name} onChangeText={(value) => props.setRecurringForm({ ...props.recurringForm, name: value })} />
                 <Field label="Amount" value={props.recurringForm.amount} onChangeText={(value) => props.setRecurringForm({ ...props.recurringForm, amount: value })} keyboardType="numeric" />
-                <PickerLike label="Category" value={props.recurringForm.category} setValue={(value) => props.setRecurringForm({ ...props.recurringForm, category: value })} options={categories} />
+                <CategoryGrid label="Category" value={props.recurringForm.category} setValue={(value) => props.setRecurringForm({ ...props.recurringForm, category: value })} />
                 <Pressable style={styles.primaryButton} onPress={props.addRecurringBill}><Text style={styles.primaryButtonText}>Add Recurring Bill</Text></Pressable>
                 <Pressable style={styles.secondaryButton} onPress={props.openManager}><Text style={styles.secondaryButtonText}>Manage Recurring Bills</Text></Pressable>
               </View>
@@ -400,6 +451,14 @@ function AddModal(props) {
                   <Pressable style={styles.secondaryButton} onPress={props.takeReceiptPhoto}><Text style={styles.secondaryButtonText}>Take Photo</Text></Pressable>
                 </View>
                 {props.receiptImage ? <Text style={styles.receiptImageLabel}>{props.receiptImage.fileName || "Receipt image selected"}</Text> : null}
+                <Pressable
+                  style={[styles.primaryButton, (!props.receiptImage || props.ocrLoading) && styles.disabledButton]}
+                  onPress={props.recognizeReceiptImage}
+                  disabled={!props.receiptImage || props.ocrLoading}
+                >
+                  <Text style={styles.primaryButtonText}>{props.ocrLoading ? "Reading Receipt..." : "Run OCR Model"}</Text>
+                </Pressable>
+                {!props.ocrReady ? <Text style={styles.ocrHint}>Set EXPO_PUBLIC_OCR_ENDPOINT to enable OCR recognition.</Text> : null}
                 <Field label="OCR text" value={props.receiptText} onChangeText={props.setReceiptText} multiline />
                 <Field label="Receipt date" value={props.receiptDate} onChangeText={props.setReceiptDate} />
                 <PickerLike label="Default category" value={props.receiptCategory} setValue={props.setReceiptCategory} options={categories} />
@@ -412,6 +471,27 @@ function AddModal(props) {
         </View>
       </View>
     </Modal>
+  );
+}
+
+function CategoryGrid({ label, value, setValue }) {
+  return (
+    <View style={styles.field}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.categoryGrid}>
+        {categories.map((category) => {
+          const active = value === category;
+          return (
+            <Pressable key={category} style={[styles.categoryOption, active && styles.categoryOptionActive]} onPress={() => setValue(category)}>
+              <View style={[styles.categoryIcon, active && styles.categoryIconActive]}>
+                <Ionicons name={categoryIcons[category]} size={18} color={active ? "#06111d" : "#60a5fa"} />
+              </View>
+              <Text style={[styles.categoryText, active && styles.categoryTextActive]} numberOfLines={1}>{category}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -678,6 +758,49 @@ function parseReceiptLines(text, fallbackCategory) {
   }).filter(Boolean);
 }
 
+async function runReceiptOcr(image) {
+  const body = new FormData();
+  body.append("image", {
+    uri: image.uri,
+    name: image.fileName || "receipt.jpg",
+    type: image.mimeType || "image/jpeg"
+  });
+
+  const response = await fetch(OCR_ENDPOINT, {
+    method: "POST",
+    headers: { Accept: "application/json" },
+    body
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || `OCR request failed with status ${response.status}`);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return extractOcrText(await response.json());
+  }
+  return response.text();
+}
+
+function extractOcrText(payload) {
+  if (!payload) return "";
+  if (typeof payload === "string") return payload;
+  if (typeof payload.text === "string") return payload.text;
+  if (typeof payload.ocrText === "string") return payload.ocrText;
+  if (typeof payload.rawText === "string") return payload.rawText;
+  if (Array.isArray(payload.lines)) return payload.lines.join("\n");
+  if (Array.isArray(payload.items)) {
+    return payload.items.map((item) => {
+      if (typeof item === "string") return item;
+      if (item.description && item.amount) return `${item.description} ${item.amount}`;
+      return "";
+    }).filter(Boolean).join("\n");
+  }
+  return "";
+}
+
 function classifyReceiptItem(description, fallbackCategory) {
   const text = description.toLowerCase();
   if (/coffee|milk|bread|egg|fruit|rice|chicken|beef|snack|pizza|grocery|food/.test(text)) return "Food";
@@ -751,17 +874,31 @@ const styles = StyleSheet.create({
   addButton: { width: 66, height: 66, marginTop: -34, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: "#60a5fa" },
   modalBackdrop: { flex: 1, alignItems: "center", justifyContent: "center", padding: 18, backgroundColor: "rgba(3, 7, 18, 0.72)" },
   modalCard: { width: "100%", maxHeight: "84%", padding: 18, borderWidth: 1, borderColor: "#263445", borderRadius: 12, backgroundColor: "#121a24" },
-  modeTabs: { flexDirection: "row", gap: 8, marginBottom: 14 },
+  addBackdrop: { flex: 1, alignItems: "stretch", justifyContent: "flex-end", backgroundColor: "rgba(3, 7, 18, 0.72)" },
+  addSheet: { width: "100%", maxHeight: "88%", overflow: "hidden", borderTopWidth: 1, borderLeftWidth: 1, borderRightWidth: 1, borderColor: "#263445", borderTopLeftRadius: 18, borderTopRightRadius: 18, backgroundColor: "#121a24" },
+  addSheetContent: { padding: 18, paddingBottom: 34 },
+  addSheetHeader: { marginHorizontal: -18, marginTop: -18, marginBottom: 16, paddingHorizontal: 18, paddingTop: 18, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: "#263445", backgroundColor: "#121a24" },
+  addSheetTitle: { color: "#ecf2f8", fontSize: 24, fontWeight: "900" },
+  modeTabs: { flexDirection: "row", gap: 8, marginBottom: 0 },
   modeTab: { flex: 1, paddingVertical: 10, borderWidth: 1, borderColor: "#263445", borderRadius: 10, alignItems: "center" },
   modeTabActive: { borderColor: "#60a5fa", backgroundColor: "rgba(96, 165, 250, 0.14)" },
   modeTabText: { color: "#9aa8b8", fontWeight: "800" },
   modeTabTextActive: { color: "#60a5fa" },
+  categoryGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  categoryOption: { width: "31.5%", minHeight: 78, alignItems: "center", justifyContent: "center", padding: 8, borderWidth: 1, borderColor: "#263445", borderRadius: 10, backgroundColor: "#0d1722" },
+  categoryOptionActive: { borderColor: "#60a5fa", backgroundColor: "rgba(96, 165, 250, 0.14)" },
+  categoryIcon: { width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 999, backgroundColor: "#172231" },
+  categoryIconActive: { backgroundColor: "#60a5fa" },
+  categoryText: { marginTop: 6, color: "#9aa8b8", fontSize: 11, fontWeight: "800" },
+  categoryTextActive: { color: "#ecf2f8" },
   primaryButton: { minHeight: 46, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "#60a5fa" },
   primaryButtonText: { color: "#06111d", fontWeight: "900" },
+  disabledButton: { opacity: 0.55 },
   secondaryButton: { minHeight: 46, marginTop: 10, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#263445", borderRadius: 10, backgroundColor: "#0d1722" },
   secondaryButtonText: { color: "#ecf2f8", fontWeight: "900" },
   receiptActions: { flexDirection: "row", gap: 10, marginBottom: 10 },
   receiptImageLabel: { marginBottom: 10, color: "#60a5fa", fontWeight: "800" },
+  ocrHint: { marginTop: 8, marginBottom: 12, color: "#9aa8b8", fontSize: 12, fontWeight: "700" },
   dangerButton: { minHeight: 46, marginTop: 16, alignItems: "center", justifyContent: "center", borderRadius: 10, backgroundColor: "#fb7185" },
   dangerButtonText: { color: "#06111d", fontWeight: "900" },
   deleteText: { color: "#fb7185", fontWeight: "900" },

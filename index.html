@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Spendly Finance Tracker</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=sticky-add-header-1">
   </head>
   <body>
     <main class="app-shell">
@@ -12,14 +12,6 @@
         <div>
           <p class="eyebrow">Personal finance model</p>
           <h1>Spendly</h1>
-        </div>
-        <div class="top-actions">
-          <label class="icon-button" title="Import CSV">
-            <span aria-hidden="true">CSV</span>
-            <input id="csvInput" type="file" accept=".csv,text/csv">
-          </label>
-          <button id="exportBtn" class="icon-button" title="Export CSV" type="button">EXP</button>
-          <button id="resetBtn" class="icon-button danger" title="Reset sample data" type="button">RST</button>
         </div>
       </section>
 
@@ -117,18 +109,19 @@
             <article class="panel table-panel">
               <div class="panel-head">
                 <h2>Recent activity</h2>
-                <input id="searchInput" type="search" placeholder="Search">
+                <div class="activity-actions">
+                  <input id="searchInput" type="search" placeholder="Search">
+                  <button id="activityEditBtn" class="secondary-action edit-toggle" type="button">Edit</button>
+                </div>
               </div>
               <div class="table-wrap">
                 <table>
                   <thead>
                     <tr>
+                      <th class="delete-column"></th>
                       <th>Date</th>
                       <th>Description</th>
-                      <th>Category</th>
-                      <th>Type</th>
                       <th>Amount</th>
-                      <th></th>
                     </tr>
                   </thead>
                   <tbody id="transactionTable"></tbody>
@@ -225,14 +218,16 @@
 
     <section id="addPanel" class="add-panel" aria-label="Add money movement" aria-hidden="true">
       <div class="add-card">
-        <div class="panel-head">
-          <h2>Add money movement</h2>
-          <button id="closeAddPanel" class="icon-button" type="button" title="Close">X</button>
-        </div>
-        <div class="mini-tabs" role="tablist" aria-label="Add modes">
-          <button class="mini-tab active" data-add-mode="transaction" type="button">Transaction</button>
-          <button class="mini-tab" data-add-mode="recurring" type="button">Recurring</button>
-          <button class="mini-tab" data-add-mode="receipt" type="button">Receipt</button>
+        <div class="add-sheet-header">
+          <div class="panel-head">
+            <h2 class="add-title">Add Transaction</h2>
+            <button id="closeAddPanel" class="icon-button" type="button" title="Close">X</button>
+          </div>
+          <div class="mini-tabs" role="tablist" aria-label="Add modes">
+            <button class="mini-tab active" data-add-mode="transaction" type="button">One-Time</button>
+            <button class="mini-tab" data-add-mode="recurring" type="button">Recurring</button>
+            <button class="mini-tab" data-add-mode="receipt" type="button">Add Receipt</button>
+          </div>
         </div>
 
         <form id="transactionForm" class="add-mode active">
@@ -255,7 +250,8 @@
           </div>
           <label>
             Category
-            <select id="category" name="category"></select>
+            <input id="category" name="category" type="hidden" value="Food">
+            <div id="categoryGrid" class="category-grid" role="radiogroup" aria-label="Transaction category"></div>
           </label>
           <label>
             Date
@@ -285,7 +281,8 @@
           </div>
           <label>
             Category
-            <select id="recurringCategory" name="category"></select>
+            <input id="recurringCategory" name="category" type="hidden" value="Housing">
+            <div id="recurringCategoryGrid" class="category-grid" role="radiogroup" aria-label="Recurring category"></div>
           </label>
           <label>
             First due date
@@ -340,6 +337,6 @@
       </div>
     </section>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=sticky-add-header-1"></script>
   </body>
 </html>
