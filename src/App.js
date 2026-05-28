@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useMemo, useState } from "react";
 import {
   Alert,
+  Animated,
   Modal,
   Pressable,
   SafeAreaView,
@@ -583,8 +584,13 @@ function Footer({ activeTab, setActiveTab, openAdd }) {
   ];
   return (
     <View style={styles.footer}>
+      <View pointerEvents="none" style={styles.footerGlow} />
+      <View pointerEvents="none" style={styles.footerShine} />
       {tabs.slice(0, 2).map(([key, icon, label]) => <FooterButton key={key} active={activeTab === key} icon={icon} label={label} onPress={() => setActiveTab(key)} />)}
-      <Pressable style={styles.addButton} onPress={openAdd}><Ionicons name="add" size={34} color="#06111d" /></Pressable>
+      <AnimatedPressable style={styles.addButton} pressedStyle={styles.addButtonPressed} onPress={openAdd}>
+        <View pointerEvents="none" style={styles.addButtonShine} />
+        <Ionicons name="add" size={34} color="#06111d" />
+      </AnimatedPressable>
       {tabs.slice(2).map(([key, icon, label]) => <FooterButton key={key} active={activeTab === key} icon={icon} label={label} onPress={() => setActiveTab(key)} />)}
     </View>
   );
@@ -592,9 +598,41 @@ function Footer({ activeTab, setActiveTab, openAdd }) {
 
 function FooterButton({ active, icon, label, onPress }) {
   return (
-    <Pressable style={[styles.footerButton, active && styles.footerButtonActive]} onPress={onPress}>
+    <AnimatedPressable style={[styles.footerButton, active && styles.footerButtonActive]} pressedStyle={styles.footerButtonPressed} onPress={onPress}>
+      {active ? <View pointerEvents="none" style={styles.footerButtonLiquid} /> : null}
       <Ionicons name={icon} size={20} color={active ? "#60a5fa" : "#9aa8b8"} />
       <Text style={[styles.footerLabel, active && styles.footerLabelActive]}>{label}</Text>
+    </AnimatedPressable>
+  );
+}
+
+function AnimatedPressable({ children, style, pressedStyle, onPress }) {
+  const scale = useMemo(() => new Animated.Value(1), []);
+  const [pressed, setPressed] = useState(false);
+  const settle = (value) => {
+    Animated.spring(scale, {
+      toValue: value,
+      useNativeDriver: true,
+      friction: 7,
+      tension: 180
+    }).start();
+  };
+
+  return (
+    <Pressable
+      onPress={onPress}
+      onPressIn={() => {
+        setPressed(true);
+        settle(0.94);
+      }}
+      onPressOut={() => {
+        setPressed(false);
+        settle(1);
+      }}
+    >
+      <Animated.View style={[style, pressed && pressedStyle, { transform: [{ scale }] }]}>
+        {children}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -866,12 +904,18 @@ const styles = StyleSheet.create({
   chipTextActive: { color: "#60a5fa" },
   meter: { height: 14, overflow: "hidden", borderRadius: 999, backgroundColor: "#263445" },
   meterFill: { height: "100%", backgroundColor: "#60a5fa" },
-  footer: { position: "absolute", left: 12, right: 12, bottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 8, borderWidth: 1, borderColor: "#374a60", borderRadius: 18, backgroundColor: "rgba(14, 24, 36, 0.96)" },
-  footerButton: { width: 58, minHeight: 54, alignItems: "center", justifyContent: "center", borderRadius: 12 },
-  footerButtonActive: { backgroundColor: "rgba(96, 165, 250, 0.14)" },
+  footer: { position: "absolute", left: 12, right: 12, bottom: 12, flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 74, padding: 8, overflow: "visible", borderWidth: 1, borderTopColor: "rgba(236, 242, 248, 0.38)", borderLeftColor: "rgba(236, 242, 248, 0.2)", borderRightColor: "rgba(96, 165, 250, 0.22)", borderBottomColor: "rgba(96, 165, 250, 0.14)", borderRadius: 24, backgroundColor: "rgba(12, 22, 34, 0.86)", shadowColor: "#000", shadowOpacity: 0.38, shadowRadius: 30, shadowOffset: { width: 0, height: 16 } },
+  footerGlow: { position: "absolute", left: 10, right: 10, bottom: 4, height: 44, borderRadius: 22, backgroundColor: "rgba(96, 165, 250, 0.12)" },
+  footerShine: { position: "absolute", left: 14, right: 14, top: 8, height: 18, borderRadius: 999, backgroundColor: "rgba(255, 255, 255, 0.14)" },
+  footerButton: { width: 58, minHeight: 54, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1, borderColor: "transparent", borderRadius: 16 },
+  footerButtonPressed: { transform: [{ scale: 0.94 }], backgroundColor: "rgba(236, 242, 248, 0.08)" },
+  footerButtonActive: { borderColor: "rgba(236, 242, 248, 0.28)", backgroundColor: "rgba(96, 165, 250, 0.2)" },
+  footerButtonLiquid: { position: "absolute", left: 4, right: 4, top: 4, bottom: 4, borderRadius: 14, backgroundColor: "rgba(96, 165, 250, 0.16)" },
   footerLabel: { marginTop: 3, color: "#9aa8b8", fontSize: 11, fontWeight: "800" },
   footerLabelActive: { color: "#60a5fa" },
-  addButton: { width: 66, height: 66, marginTop: -34, alignItems: "center", justifyContent: "center", borderRadius: 20, backgroundColor: "#60a5fa" },
+  addButton: { width: 66, height: 66, marginTop: -34, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: 1, borderTopColor: "rgba(255, 255, 255, 0.62)", borderLeftColor: "rgba(255, 255, 255, 0.36)", borderRightColor: "rgba(6, 17, 29, 0.16)", borderBottomColor: "rgba(6, 17, 29, 0.24)", borderRadius: 22, backgroundColor: "rgba(96, 165, 250, 0.92)", shadowColor: "#60a5fa", shadowOpacity: 0.38, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
+  addButtonPressed: { transform: [{ translateY: 3 }, { scale: 0.94 }], backgroundColor: "rgba(45, 212, 191, 0.9)" },
+  addButtonShine: { position: "absolute", left: 12, right: 12, top: 8, height: 14, borderRadius: 999, backgroundColor: "rgba(255, 255, 255, 0.34)" },
   modalBackdrop: { flex: 1, alignItems: "center", justifyContent: "center", padding: 18, backgroundColor: "rgba(3, 7, 18, 0.72)" },
   modalCard: { width: "100%", maxHeight: "84%", padding: 18, borderWidth: 1, borderColor: "#263445", borderRadius: 12, backgroundColor: "#121a24" },
   addBackdrop: { flex: 1, alignItems: "stretch", justifyContent: "flex-end", backgroundColor: "rgba(3, 7, 18, 0.72)" },

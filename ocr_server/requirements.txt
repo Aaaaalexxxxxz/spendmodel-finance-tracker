@@ -1,0 +1,9 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.20
+Pillow==11.0.0
+
+# Install these when you are ready to run a Donut model locally.
+# transformers==4.46.3
+# torch==2.5.1
+# sentencepiece==0.2.0

@@ -57,6 +57,26 @@ Spendly sends a `POST` request with multipart form data under the `image` field.
 
 Keep provider API keys on that backend endpoint instead of embedding them in the mobile app.
 
+This repo includes a starter OCR API in `ocr_server/`. To run it locally:
+
+```bash
+cd ocr_server
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn server:app --host 0.0.0.0 --port 8787
+```
+
+Then start Expo with:
+
+```bash
+EXPO_PUBLIC_OCR_ENDPOINT=http://127.0.0.1:8787/ocr npm start
+```
+
+The OCR server starts in stub mode for integration testing. Set
+`OCR_MODEL_MODE=donut` and `OCR_MODEL_NAME` to a pretrained or fine-tuned Donut
+model when you are ready to run real receipt recognition.
+
 Build for app stores with EAS:
 
 ```bash
